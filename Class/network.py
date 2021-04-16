@@ -4,7 +4,79 @@ from tensorflow.keras.layers import Dense, Conv2D, Dropout, Flatten, MaxPooling2
 import matplotlib.pyplot as plt
 
 
-class Network:
+class FiveLayerNetwork:
+    def __init__(self):
+        self.model = Sequential()
+        self.setupNet()
+
+    def setupNet(self):
+        self.model = Sequential()
+
+        # First Layer
+        self.model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+        self.model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+        self.model.add(MaxPooling2D())
+
+        # Second Layer
+        # Instead of 1 2D conv we do the equivalent of 2 1D conv
+        self.model.add(SeparableConv2D(
+            32, (3, 3), activation='relu', padding='same'))
+        self.model.add(SeparableConv2D(
+            32, (3, 3), activation='relu', padding='same'))
+        # Normalize layers inputs to avoid internal covariate shift
+        self.model.add(BatchNormalization())
+        self.model.add(MaxPooling2D())
+
+        # Third Layer
+        self.model.add(SeparableConv2D(
+            64, (3, 3), activation='relu', padding='same'))
+        self.model.add(SeparableConv2D(
+            64, (3, 3), activation='relu', padding='same'))
+        self.model.add(BatchNormalization())
+        self.model.add(MaxPooling2D())
+
+        # Fourth Layer
+        self.model.add(SeparableConv2D(
+            128, (3, 3), activation='relu', padding='same'))
+        self.model.add(SeparableConv2D(
+            128, (3, 3), activation='relu', padding='same'))
+        self.model.add(BatchNormalization())
+        self.model.add(MaxPooling2D())
+        self.model.add(Dropout(0.2))
+
+        # Fifth Layer
+        self.model.add(SeparableConv2D(
+            256, (3, 3), activation='relu', padding='same'))
+        self.model.add(SeparableConv2D(
+            256, (3, 3), activation='relu', padding='same'))
+        self.model.add(BatchNormalization())
+        self.model.add(MaxPooling2D())
+        self.model.add(Dropout(0.2))
+
+        # Fully Connected Layer
+        self.model.add(Flatten())
+        self.model.add(Dense(512, activation='relu'))
+        self.model.add(Dropout(0.7))
+        self.model.add(Dense(128, activation='relu'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(64, activation='relu'))
+        self.model.add(Dropout(0.3))
+
+        # Output Layer
+        self.model.add(Dense(1, activation='sigmoid'))
+
+    def compile(self, op, loss, metrics):
+        self.model.compile(optimizer=op, loss=loss,
+                           metrics=metrics)
+
+    def fit(self, epochs, batch, train, validation, callbacks):
+        return self.model.fit(
+            train, steps_per_epoch=train.samples // batch,
+            epochs=epochs, validation_data=validation,
+            validation_steps=validation.samples // batch, callbacks=callbacks)
+
+
+class OneLayerNetwork:
     def __init__(self, shape):
         # Using the Sequential model as it allows linear stacking of layers
 

@@ -3,6 +3,10 @@ import numpy as np
 from tensorflow.keras.preprocessing.image import load_img
 from tensorflow.keras.preprocessing.image import img_to_array
 
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import cv2
+import matplotlib.pyplot as plt
+
 SAMPLE_PATH = os.getcwd() + '/chest_Xray/'
 NORMAL_VALUE = np.uint8(1)
 PNEUMONIA_VALUE = np.uint8(0)
@@ -146,3 +150,58 @@ class Data:
         y_val = None
 
         print('Val Shape: ' + str(self.x_val.shape))
+
+
+class DataFiveLayers:
+    def __init__(self, input_path, data_set, img_dims):
+        self.input_path = input_path
+        self.data_set = data_set
+        self.img_dims = img_dims
+        print("Created Data Object")
+
+    def process_train_data(self, img_dims, batch_size):
+        train_datagen = ImageDataGenerator(
+            rescale=1./255, zoom_range=0.3, vertical_flip=True)
+        test_datagen = ImageDataGenerator(rescale=1./255)
+
+        # This is fed to the network in the specified batch sizes and image dimensions
+        # Allows for faster and lighter imports
+        train_gen = train_datagen.flow_from_directory(
+            directory=self.input_path+'train',
+            target_size=(img_dims, img_dims),
+            batch_size=batch_size,
+            class_mode='binary',
+            shuffle=True)
+
+        # Using test data for validation as it's bigger
+        test_gen = test_datagen.flow_from_directory(
+            directory=self.input_path+'test',
+            target_size=(img_dims, img_dims),
+            batch_size=batch_size,
+            class_mode='binary',
+            shuffle=True)
+
+        return train_gen, test_gen
+
+    def process_test_data(self, img_dims):
+        test_data = []
+        test_labels = []
+
+        for cond in ['/NORMAL/', '/PNEUMONIA/']:
+            for img in (os.listdir(self.input_path + self.data_set + cond)):
+                img = plt.imread(self.input_path + self.data_set + cond + img)
+                img = cv2.resize(img, (img_dims, img_dims))
+                img = np.dstack([img, img, img])
+                img = img.astype('float32') / 255
+                if cond == '/NORMAL/':
+                    label = 0
+                elif cond == '/PNEUMONIA/':
+                    label = 1
+                test_data.append(img)
+                test_labels.append(label)
+
+        test_data = np.array(test_data)
+        test_labels = np.array(test_labels)
+        print("Test data shape: {}".format(test_data.shape))
+
+        return test_data, test_labels
